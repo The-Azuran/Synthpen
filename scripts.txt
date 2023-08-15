@@ -1,0 +1,125 @@
+let audioContext, oscillator, gainNode;
+let drawing = false;
+let lastX, lastY;
+
+/**
+ * Function to start drawing and initialize sound
+ */
+function startDrawing() {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    oscillator = audioContext.createOscillator();
+    gainNode = audioContext.createGain();
+
+    oscillator.type = document.getElementById('waveform').value;
+    oscillator.frequency.setValueAtTime(document.getElementById('frequency').value, audioContext.currentTime);
+    gainNode.gain.setValueAtTime(document.getElementById('volume').value, audioContext.currentTime);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    oscillator.start(0);
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime); // Mute initially
+}
+
+/**
+ * Function to update the background color
+ */
+function updateBackground() {
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const bgColor = document.getElementById('bgColor').value;
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+/**
+ * Function to validate facets input
+ */
+function validateFacets() {
+    const facetsInput = document.getElementById('facets');
+    facetsInput.value = Math.min(100, Math.max(2, facetsInput.value));
+}
+
+/**
+ * Function to clear the canvas
+ */
+function clearCanvas() {
+    updateBackground();
+}
+
+/**
+ * Function to save the canvas
+ */
+function saveCanvas() {
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL();
+    link.download = 'mandala.png';
+    link.click();
+}
+
+/**
+ * Event listener for drawing
+ */
+const canvas = document.getElementById('canvas');
+canvas.width = window.innerWidth * 0.8;
+canvas.height = window.innerHeight * 0.8;
+updateBackground();
+canvas.addEventListener('mousedown', (event) => {
+    drawing = true;
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime); // Unmute
+    [lastX, lastY] = [event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop];
+});
+canvas.addEventListener('mouseup', () => {
+    drawing = false;
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime); // Mute again
+});
+canvas.addEventListener('mousemove', draw);
+
+/**
+ * Main drawing function
+ * @param {event} event - Mousemove event
+ */
+function draw(event) {
+    if (!drawing) return;
+    const x = event.clientX - canvas.offsetLeft;
+    const y = event.clientY - canvas.offsetTop;
+    const zenMode = document.getElementById('zenMode').checked;
+
+    if (zenMode) {
+        updateBackground();
+    }
+
+    const lineColor = document.getElementById('lineColor').value;
+    const brushSize = document.getElementById('brushSize').value;
+    const brushShape = document.getElementById('brushShape').value;
+    const symmetryMode = document.getElementById('symmetryMode').value;
+    const facets = document.getElementById('facets').value;
+
+    // Sound integration based on facets and location
+    const frequency = document.getElementById('frequency').value;
+    const volume = document.getElementById('volume').value;
+    oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+    gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+
+    const ctx = canvas.getContext('2d');
+    ctx.lineWidth = brushSize;
+    ctx.lineCap = brushShape;
+    ctx.strokeStyle = lineColor;
+
+    for (let i = 0; i < facets; i++) {
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate((2 * Math.PI / facets) * i);
+
+        if (symmetryMode === 'reflective' && i % 2 === 1) {
+            ctx.scale(1, -1);
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(lastX - canvas.width / 2, lastY - canvas.height / 2);
+        ctx.lineTo(x - canvas.width / 2, y - canvas.height / 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    [lastX, lastY] = [x, y];
+}

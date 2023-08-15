@@ -1,0 +1,15 @@
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: Arial, sans-serif;
+}
+
+canvas {
+    border: 1px solid black;
+    margin: 10px;
+}
+
+input, select {
+    margin: 5px;
+}
